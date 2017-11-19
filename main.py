@@ -1,21 +1,16 @@
 import numpy as np  # linear algebra
 import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
-import pdb
-from sklearn.model_selection import train_test_split
-from keras.utils.np_utils import to_categorical
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten, Lambda, Activation
-from keras.layers import Conv2D, MaxPooling2D, ZeroPadding2D, GlobalAveragePooling2D
-from keras.layers.normalization import BatchNormalization
-from keras.optimizers import Adam
-from keras import backend as K
-from matplotlib import pyplot as plt
 import scipy
-from scipy import misc, ndimage
-from scipy.ndimage.interpolation import zoom
-from scipy.ndimage import imread
-
-train = pd.read_json('input/train.json')
+from keras import backend as K
+from keras.layers import Conv2D, MaxPooling2D, ZeroPadding2D, GlobalAveragePooling2D
+from keras.layers import Lambda, Activation
+from keras.layers.normalization import BatchNormalization
+from keras.models import Sequential
+from keras.optimizers import Adam
+from keras.utils.np_utils import to_categorical
+from matplotlib import pyplot as plt
+from scipy import misc
+from sklearn.model_selection import train_test_split
 
 
 def get_images(df):
@@ -70,29 +65,6 @@ def create_model():
     return model
 
 
-model = create_model()
-model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
-
-print(model.summary())
-
-X = get_images(train)
-y = to_categorical(train.is_iceberg.values, num_classes=2)
-
-Xtr, Xv, ytr, yv = train_test_split(X, y, shuffle=False, test_size=0.20)
-
-init_epo = 0
-num_epo = 30
-end_epo = init_epo + num_epo
-
-print('lr = {}'.format(K.get_value(model.optimizer.lr)))
-history = model.fit(Xtr, ytr, validation_data=(Xv, yv), batch_size=32, epochs=end_epo, initial_epoch=init_epo)
-init_epo += num_epo
-end_epo = init_epo + num_epo
-
-l = model.layers
-conv_fn = K.function([l[0].input, K.learning_phase()], [l[-4].output])
-
-
 def get_cm(inp, label):
     '''Convert the 4x4 layer data to a 75x75 image.'''
     conv = np.rollaxis(conv_fn([inp, 0])[0][0], 2, 0)[label]
@@ -126,9 +98,30 @@ def info_img(im_idx):
     plt.imshow(cm1, cmap="cool", alpha=0.5)
 
 
+train = pd.read_json('input/train.json')
+X = get_images(train)
+y = to_categorical(train.is_iceberg.values, num_classes=2)
+Xtr, Xv, ytr, yv = train_test_split(X, y, shuffle=False, test_size=0.20)
+
+model = create_model()
+model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
+print(model.summary())
+
+init_epo = 0
+num_epo = 30
+end_epo = init_epo + num_epo
+
+print('lr = {}'.format(K.get_value(model.optimizer.lr)))
+history = model.fit(Xtr, ytr, validation_data=(Xv, yv), batch_size=32, epochs=end_epo, initial_epoch=init_epo)
+init_epo += num_epo
+end_epo = init_epo + num_epo
+
+l = model.layers
+conv_fn = K.function([l[0].input, K.learning_phase()], [l[-4].output])
+
 info_img(13)
 
-test = pd.read_json('../input/test.json')
+test = pd.read_json('input/test.json')
 Xtest = get_images(test)
 test_predictions = model.predict_proba(Xtest)
 submission = pd.DataFrame({'id': test['id'], 'is_iceberg': test_predictions[:, 1]})
