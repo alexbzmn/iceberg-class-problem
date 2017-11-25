@@ -1,3 +1,5 @@
+import time
+
 import numpy as np  # linear algebra
 import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 import scipy
@@ -6,6 +8,7 @@ from keras.layers import Conv2D, MaxPooling2D, ZeroPadding2D, GlobalAveragePooli
 from keras.layers import Lambda, Activation
 from keras.layers.normalization import BatchNormalization
 from keras.models import Sequential
+from keras.models import model_from_json
 from keras.optimizers import Adam
 from keras.utils.np_utils import to_categorical
 from matplotlib import pyplot as plt
@@ -71,7 +74,7 @@ def get_cm(inp, label):
     return scipy.misc.imresize(conv, (75, 75), interp='nearest')
 
 
-def info_img(im_idx):
+def info_img(im_idx, model):
     '''Generate heat maps for the boat (boatness) and iceberg (bergness) for image im_idx.'''
     if (yv[im_idx][1] == 1.0):
         img_type = 'iceberg'
@@ -98,31 +101,55 @@ def info_img(im_idx):
     plt.imshow(cm1, cmap="cool", alpha=0.5)
 
 
+def load_model(date_pattern):
+    json_file = open("models/model_{0}.json".format(date_pattern), 'r')
+    loaded_model_json = json_file.read()
+    json_file.close()
+    loaded_model = model_from_json(loaded_model_json)
+    # load weights into new model
+    loaded_model.load_weights("models/model_w_{0}.h5".format(date_pattern))
+    model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
+    print("Loaded model from disk")
+
+    return loaded_model
+
+
+def store_model(model):
+    model_json = model.to_json()
+    now_date = time.strftime("%H_%M_%S")
+    with open("models/model_{0}.json".format(now_date), "w") as json_file:
+        json_file.write(model_json)
+
+    # serialize weights to HDF5
+    model.save_weights("models/model_w_{0}.h5".format(now_date))
+    print("Saved model to disk")
+
+
 train = pd.read_json('input/train.json')
 X = get_images(train)
 y = to_categorical(train.is_iceberg.values, num_classes=2)
 Xtr, Xv, ytr, yv = train_test_split(X, y, shuffle=False, test_size=0.20)
 
 model = create_model()
-model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
+model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
 print(model.summary())
 
 init_epo = 0
-num_epo = 30
+num_epo = 1
 end_epo = init_epo + num_epo
 
 print('lr = {}'.format(K.get_value(model.optimizer.lr)))
 history = model.fit(Xtr, ytr, validation_data=(Xv, yv), batch_size=32, epochs=end_epo, initial_epoch=init_epo)
-init_epo += num_epo
-end_epo = init_epo + num_epo
+
+store_model(model)
 
 l = model.layers
 conv_fn = K.function([l[0].input, K.learning_phase()], [l[-4].output])
 
-info_img(13)
+info_img(13, model)
 
-test = pd.read_json('input/test.json')
-Xtest = get_images(test)
-test_predictions = model.predict_proba(Xtest)
-submission = pd.DataFrame({'id': test['id'], 'is_iceberg': test_predictions[:, 1]})
-submission.to_csv('sub_fcn.csv', index=False)
+# test = pd.read_json('input/test.json')
+# Xtest = get_images(test)
+# test_predictions = model.predict_proba(Xtest)
+# submission = pd.DataFrame({'id': test['id'], 'is_iceberg': test_predictions[:, 1]})
+# submission.to_csv('sub_fcn.csv', index=False)
