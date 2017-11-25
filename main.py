@@ -108,7 +108,7 @@ def load_model(date_pattern):
     loaded_model = model_from_json(loaded_model_json)
     # load weights into new model
     loaded_model.load_weights("models/model_w_{0}.h5".format(date_pattern))
-    model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
+    loaded_model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
     print("Loaded model from disk")
 
     return loaded_model
@@ -130,19 +130,20 @@ X = get_images(train)
 y = to_categorical(train.is_iceberg.values, num_classes=2)
 Xtr, Xv, ytr, yv = train_test_split(X, y, shuffle=False, test_size=0.20)
 
-model = create_model()
-model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
-print(model.summary())
+# model = create_model()
+# model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
+# print(model.summary())
+#
+# init_epo = 0
+# num_epo = 30
+# end_epo = init_epo + num_epo
+#
+# print('lr = {}'.format(K.get_value(model.optimizer.lr)))
+# history = model.fit(Xtr, ytr, validation_data=(Xv, yv), batch_size=32, epochs=end_epo, initial_epoch=init_epo)
 
-init_epo = 0
-num_epo = 1
-end_epo = init_epo + num_epo
+# store_model(model)
 
-print('lr = {}'.format(K.get_value(model.optimizer.lr)))
-history = model.fit(Xtr, ytr, validation_data=(Xv, yv), batch_size=32, epochs=end_epo, initial_epoch=init_epo)
-
-store_model(model)
-
+model = load_model('23_03_51')
 l = model.layers
 conv_fn = K.function([l[0].input, K.learning_phase()], [l[-4].output])
 
