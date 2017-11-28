@@ -130,20 +130,25 @@ X = get_images(train)
 y = to_categorical(train.is_iceberg.values, num_classes=2)
 Xtr, Xv, ytr, yv = train_test_split(X, y, shuffle=False, test_size=0.20)
 
-# model = create_model()
-# model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
-# print(model.summary())
-#
-# init_epo = 0
-# num_epo = 30
-# end_epo = init_epo + num_epo
-#
-# print('lr = {}'.format(K.get_value(model.optimizer.lr)))
-# history = model.fit(Xtr, ytr, validation_data=(Xv, yv), batch_size=32, epochs=end_epo, initial_epoch=init_epo)
 
-# store_model(model)
+def train_store_model():
+    custom_model = create_model()
+    custom_model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
+    print(custom_model.summary())
+    init_epo = 0
+    num_epo = 30
+    end_epo = init_epo + num_epo
+    print('lr = {}'.format(K.get_value(custom_model.optimizer.lr)))
+    history = custom_model.fit(Xtr, ytr, validation_data=(Xv, yv), batch_size=32, epochs=end_epo,
+                               initial_epoch=init_epo)
+    store_model(custom_model)
 
-model = load_model('23_03_51')
+    return custom_model
+
+
+model = train_store_model()
+# model = load_model('23_03_51')
+
 l = model.layers
 conv_fn = K.function([l[0].input, K.learning_phase()], [l[-4].output])
 
