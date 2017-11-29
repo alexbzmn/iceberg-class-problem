@@ -14,6 +14,8 @@ from keras.utils.np_utils import to_categorical
 from matplotlib import pyplot as plt
 from scipy import misc
 from sklearn.model_selection import train_test_split
+from skimage.transform import rescale, resize, downscale_local_mean
+
 
 
 def get_images(df):
@@ -125,12 +127,6 @@ def store_model(model):
     print("Saved model to disk")
 
 
-train = pd.read_json('input/train.json')
-X = get_images(train)
-y = to_categorical(train.is_iceberg.values, num_classes=2)
-Xtr, Xv, ytr, yv = train_test_split(X, y, shuffle=False, test_size=0.20)
-
-
 def train_store_model():
     custom_model = create_model()
     custom_model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
@@ -146,8 +142,24 @@ def train_store_model():
     return custom_model
 
 
-model = train_store_model()
+train = pd.read_json('input/train.json')
+X = get_images(train)
+y = to_categorical(train.is_iceberg.values, num_classes=2)
+Xtr, Xv, ytr, yv = train_test_split(X, y, shuffle=False, test_size=0.20)
+
+# model = train_store_model()
 # model = load_model('23_03_51')
+from se_resnet import SEResNet
+
+model = SEResNet(input_shape=(75, 75, 3), classes=2)
+model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
+print(model.summary())
+init_epo = 0
+num_epo = 30
+end_epo = init_epo + num_epo
+print('lr = {}'.format(K.get_value(model.optimizer.lr)))
+history = model.fit(Xtr, ytr, validation_data=(Xv, yv), batch_size=32, epochs=end_epo,
+                    initial_epoch=init_epo)
 
 l = model.layers
 conv_fn = K.function([l[0].input, K.learning_phase()], [l[-4].output])
