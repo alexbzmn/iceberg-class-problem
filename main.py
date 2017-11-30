@@ -1,8 +1,7 @@
-import time
-
 import numpy as np  # linear algebra
 import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 import scipy
+import time
 from keras import backend as K
 from keras.layers import Conv2D, MaxPooling2D, ZeroPadding2D, GlobalAveragePooling2D
 from keras.layers import Lambda, Activation
@@ -13,9 +12,8 @@ from keras.optimizers import Adam
 from keras.utils.np_utils import to_categorical
 from matplotlib import pyplot as plt
 from scipy import misc
-from sklearn.model_selection import train_test_split
 from skimage.transform import rescale, resize, downscale_local_mean
-
+from sklearn.model_selection import train_test_split
 
 
 def get_images(df):
@@ -116,9 +114,13 @@ def load_model(date_pattern):
     return loaded_model
 
 
-def store_model(model):
+def store_model(model, name=None):
     model_json = model.to_json()
     now_date = time.strftime("%H_%M_%S")
+
+    if name is not None:
+        now_date += name
+
     with open("models/model_{0}.json".format(now_date), "w") as json_file:
         json_file.write(model_json)
 
@@ -155,19 +157,23 @@ model = SEResNet(input_shape=(75, 75, 3), classes=2)
 model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
 print(model.summary())
 init_epo = 0
-num_epo = 30
+num_epo = 1
 end_epo = init_epo + num_epo
 print('lr = {}'.format(K.get_value(model.optimizer.lr)))
 history = model.fit(Xtr, ytr, validation_data=(Xv, yv), batch_size=32, epochs=end_epo,
                     initial_epoch=init_epo)
 
-l = model.layers
-conv_fn = K.function([l[0].input, K.learning_phase()], [l[-4].output])
+store_model(model, name='SERESNET1')
 
-info_img(13, model)
+# l = model.layers
+# conv_fn = K.function([l[0].input, K.learning_phase()], [l[-4].output])
 
-# test = pd.read_json('input/test.json')
-# Xtest = get_images(test)
-# test_predictions = model.predict_proba(Xtest)
-# submission = pd.DataFrame({'id': test['id'], 'is_iceberg': test_predictions[:, 1]})
-# submission.to_csv('sub_fcn.csv', index=False)
+# info_img(13, model)
+
+# model = load_model("22_49_25SERESNET1")
+
+test = pd.read_json('input/test.json')
+Xtest = get_images(test)
+test_predictions = model.predict(Xtest)
+submission = pd.DataFrame({'id': test['id'], 'is_iceberg': test_predictions[:, 1]})
+submission.to_csv('sub_fcn_RESNET1_1.csv', index=False)
