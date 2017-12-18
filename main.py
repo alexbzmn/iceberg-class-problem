@@ -247,7 +247,7 @@ score = model.evaluate(X, y, verbose=1)
 print('Train score:', score[0])
 print('Train accuracy:', score[1])
 
-df_test = pd.read_json('../input/test.json')
+df_test = pd.read_json('input/test.json')
 df_test.inc_angle = df_test.inc_angle.replace('na', 0)
 Xtest = (get_images(df_test))
 pred_test = model.predict(Xtest)
